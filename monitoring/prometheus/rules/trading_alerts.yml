@@ -1,0 +1,104 @@
+groups:
+  - name: trading_system_alerts
+    rules:
+      # Service Health Alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 30 seconds"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value }} errors per second"
+
+      # Trading Specific Alerts
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on {{ $labels.job }}"
+          description: "95th percentile latency is {{ $value }}s"
+
+      - alert: TradingVolumeAnomaly
+        expr: trading_volume_total > 1000000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual trading volume detected"
+          description: "Trading volume is {{ $value }}, which is unusually high"
+
+      - alert: PortfolioVaRBreach
+        expr: portfolio_var_1d > portfolio_value * 0.05
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Portfolio VaR limit breached"
+          description: "1-day VaR ({{ $value }}) exceeds 5% of portfolio value"
+
+      - alert: ModelDriftDetected
+        expr: model_drift_score > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model drift detected"
+          description: "Model drift score is {{ $value }}, retraining may be required"
+
+      - alert: OrderExecutionFailure
+        expr: rate(order_execution_failures_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High order execution failure rate"
+          description: "Order execution failure rate is {{ $value }} per second"
+
+      # Infrastructure Alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}%"
+
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}%"
+
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "Database has {{ $value }} active connections"

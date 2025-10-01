@@ -1,0 +1,100 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - curl
+  - wget
+  - unzip
+  - git
+
+runcmd:
+  # Start Docker service
+  - systemctl start docker
+  - systemctl enable docker
+  - usermod -aG docker ubuntu
+
+  # Create application directory
+  - mkdir -p /opt/trading-system
+  - cd /opt/trading-system
+
+  # Decode and save docker-compose file
+  - echo "${docker_compose_content}" | base64 -d > docker-compose.yml
+
+  # Create environment file
+  - |
+    cat > .env << EOF
+    DATABASE_URL=postgresql://admin:${db_password}@${db_host}:1521/tradingdb
+    REDIS_HOST=redis
+    REDIS_PORT=6379
+    JWT_SECRET_KEY=$(openssl rand -hex 32)
+    ENVIRONMENT=production
+    EOF
+
+  # Pull and start containers
+  - docker-compose pull
+  - docker-compose up -d
+
+  # Setup log rotation
+  - |
+    cat > /etc/logrotate.d/trading-system << EOF
+    /var/log/trading/*.log {
+        daily
+        rotate 30
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 644 root root
+    }
+    EOF
+
+  # Create systemd service for auto-restart
+  - |
+    cat > /etc/systemd/system/trading-system.service << EOF
+    [Unit]
+    Description=Trading System
+    Requires=docker.service
+    After=docker.service
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    WorkingDirectory=/opt/trading-system
+    ExecStart=/usr/bin/docker-compose up -d
+    ExecStop=/usr/bin/docker-compose down
+    TimeoutStartSec=0
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+  - systemctl enable trading-system.service
+  - systemctl start trading-system.service
+
+write_files:
+  - path: /opt/trading-system/healthcheck.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Health check script for trading system
+      
+      services=("api-gateway:8000" "decision-service:8001" "risk-service:8002" "execution-service:8003")
+      
+      for service in "${services[@]}"; do
+          IFS=':' read -r name port <<< "$service"
+          if ! curl -f "http://localhost:$port/health" > /dev/null 2>&1; then
+              echo "Service $name is unhealthy"
+              exit 1
+          fi
+      done
+      
+      echo "All services are healthy"
+      exit 0
+
+  - path: /etc/cron.d/trading-healthcheck
+    content: |
+      # Health check every minute
+      * * * * * root /opt/trading-system/healthcheck.sh >> /var/log/trading-healthcheck.log 2>&1

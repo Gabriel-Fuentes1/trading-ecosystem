@@ -1,0 +1,69 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Trading Services
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'decision-service'
+    static_configs:
+      - targets: ['decision-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'risk-service'
+    static_configs:
+      - targets: ['risk-service:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'execution-service'
+    static_configs:
+      - targets: ['execution-service:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Database
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Custom Trading Metrics
+  - job_name: 'trading-metrics'
+    static_configs:
+      - targets: ['trading-metrics-exporter:8090']
+    scrape_interval: 1s

@@ -1,0 +1,172 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Trading System Dashboard",
+    "tags": ["trading", "quantitative"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Portfolio Value",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "portfolio_value_total",
+            "legendFormat": "Portfolio Value"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [{ "color": "green", "value": null }]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Daily P&L",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "portfolio_pnl_daily",
+            "legendFormat": "Daily P&L"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0 }]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Portfolio VaR",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "portfolio_var_1d",
+            "legendFormat": "1-Day VaR"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 10000 },
+                { "color": "red", "value": 50000 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 }
+      },
+      {
+        "id": 4,
+        "title": "System Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "system_health_score",
+            "legendFormat": "Health Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "green", "value": 90 }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 }
+      },
+      {
+        "id": 5,
+        "title": "Trading Volume",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(trading_volume_total[5m])",
+            "legendFormat": "Trading Volume"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "currencyUSD"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 6,
+        "title": "Order Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "order_success_rate",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 7,
+        "title": "Service Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(service_response_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(service_response_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "s"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

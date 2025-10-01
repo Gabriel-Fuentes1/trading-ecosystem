@@ -1,0 +1,112 @@
+name: MLOps Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'mlops/**'
+      - 'models/**'
+      - 'data/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mlops/**'
+      - 'models/**'
+      - 'data/**'
+  schedule:
+    # Run daily at 2 AM UTC for model retraining
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.9'
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+jobs:
+  data-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        pip install -r mlops/requirements.txt
+    
+    - name: Run data validation
+      run: |
+        python -m pytest mlops/tests/test_data_validation.py -v
+    
+    - name: Check data drift
+      run: |
+        python mlops/monitoring/drift_detector.py --config config/drift_config.yaml
+
+  model-training:
+    needs: data-validation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        pip install -r mlops/requirements.txt
+    
+    - name: Train RL model
+      run: |
+        python mlops/rl_trainer.py --config config/rl_config.yaml
+    
+    - name: Run backtesting
+      run: |
+        python mlops/backtesting/vectorbt_backtester.py --model-path models/latest_model.pkl
+    
+    - name: Generate model explanations
+      run: |
+        python mlops/explainability/shap_explainer.py --model-path models/latest_model.pkl
+
+  model-validation:
+    needs: model-training
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        pip install -r mlops/requirements.txt
+    
+    - name: Validate model performance
+      run: |
+        python -m pytest mlops/tests/test_model_validation.py -v
+    
+    - name: Check model metrics
+      run: |
+        python mlops/validation/model_validator.py --model-path models/latest_model.pkl
+
+  deployment:
+    needs: model-validation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: |
+        echo "Deploying model to production..."
+        # Add deployment logic here
+    
+    - name: Update model registry
+      run: |
+        python mlops/model_registry.py --register-model models/latest_model.pkl

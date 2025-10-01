@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-config
+  namespace: trading-system
+data:
+  DATABASE_URL: "postgresql://admin:password@postgres:5432/trading"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
